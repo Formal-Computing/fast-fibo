@@ -1,0 +1,25 @@
+name: Dafny verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Dafny 4.11.0
+        uses: dafny-lang/setup-dafny-action@v1
+        with:
+          dafny-version: "4.11.0"
+
+      - name: Verify fast-doubling proof
+        run: dafny verify src/FastFibonacci.dfy

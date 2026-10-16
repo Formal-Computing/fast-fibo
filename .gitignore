@@ -1,0 +1,13 @@
+# Dafny build artifacts
+.dafny/
+*.dll
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.trace
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
