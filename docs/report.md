@@ -62,7 +62,7 @@ Dafny program verifier finished with 6 verified, 0 errors
 
 The verifier reported **zero errors**. There are no `assume`, `{:axiom}`, or `sorry` placeholders in the source. The resulting status for S1–S6 is complete, under Dafny's usual formal semantics and arithmetic model.
 
-**Reproducibility:** GitHub Actions runs the same verification command on every pull request and push to `main`. Platform-dependent verification timings are not used as correctness evidence; the runtime measured during the final verification run can be recorded separately.
+**Reproducibility:** GitHub Actions runs the same verification command on every pull request and push to `main`. Measured verification wall time: 4.5 seconds on the Windows workstation (Dafny 4.11.0). Timings are platform-dependent and are not correctness evidence.
 
 ## E. Discussion
 
