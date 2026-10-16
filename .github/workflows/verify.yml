@@ -21,5 +21,8 @@ jobs:
         with:
           dafny-version: "4.11.0"
 
-      - name: Verify fast-doubling proof
+      - name: Verify Level 1 and Level 2
         run: dafny verify src/FastFibonacci.dfy
+
+      - name: Verify Level 3 signed-64-bit safety
+        run: dafny verify src/Int64Fibonacci.dfy

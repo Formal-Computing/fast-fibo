@@ -1,62 +1,76 @@
-# Verified Fast Fibonacci — FMSE H24
+# Verified Fast Fibonacci — FMSE Homework H24
 
-A Dafny 4.11.0 implementation of the **fast-doubling Fibonacci algorithm**, with machine-checked functional correctness, termination, and exact logarithmic recursion-step bounds.
+This repository implements the **fast-doubling Fibonacci algorithm** and formally verifies three complementary properties in Dafny 4.11.0:
 
-## Reproduce the verification
+1. **Level 1 — Functional correctness and termination** for every natural-number input.
+2. **Level 2 — Exact logarithmic recursion depth**, certified by an instrumented step counter.
+3. **Level 3 — Signed-64-bit overflow safety**, with the maximal safe input range established mathematically.
 
-Install Dafny 4.11.0, then run:
+## Run the proofs
+
+Install [Dafny 4.11.0](https://dafny.org/latest/Installation) and execute:
 
 ```sh
 dafny verify src/FastFibonacci.dfy
+dafny verify src/Int64Fibonacci.dfy
 ```
 
-**Local result:** 12 verified, 0 errors (Windows, Dafny 4.11.0). The GitHub Actions workflow executes the same verification command on every push to `main` and every pull request.
+Both files are verified by [GitHub Actions](.github/workflows/verify.yml) on pushes to `main` and pull requests.
 
-## Level 1: functional correctness
+## Level 1: algorithm correctness
 
-- `Fib(n)`: independent recursive specification, F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2).
-- `Doubling(k)`: proves the two fast-doubling identities for all natural numbers.
-- `FastPair(n)`: computes F(n) and F(n+1) through one recursive call on n/2.
-- `FastFib(n)`: retains its original public interface and guarantees `result == Fib(n)`.
-
-The required doubling identities are:
+`FastFibonacci.dfy` defines an independent mathematical specification `Fib`:
 
 ```text
-a = F(k), b = F(k+1)
-F(2k)   = a * (2*b - a)
-F(2k+1) = a*a + b*b
+F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2).
 ```
 
-## Level 2: verified logarithmic recursion depth
-
-The **same `FastPair` implementation** returns a third value, `steps`, counting non-base-case recursive calls (including base case, total invocations = steps + 1). The independently specified cost function is:
+The `Doubling` lemma proves:
 
 ```text
-S(0) = 0
-S(n) = 1 + S(floor(n / 2)), for n > 0
+a=F(k), b=F(k+1)
+F(2k)   = a*(2*b-a)
+F(2k+1) = a*a+b*b
 ```
 
-Dafny proves `steps == S(n)` and, for all n>0:
+The implementation `FastPair(n)` returns `F(n)` and `F(n+1)` by recursion on `floor(n/2)`. The public method `FastFib(n)` returns the correct value of `F(n)` for all natural n.
+
+## Level 2: exact logarithmic bound
+
+`FastPair` also returns a count `steps` of non-base-case recursive calls. Dafny verifies that it matches an independent counting specification and, for n>0:
 
 ```text
 2^(steps-1) <= n < 2^steps
 ```
 
-Therefore `steps = floor(log2(n)) + 1` for n>0, and `steps = 0` for n=0. This establishes logarithmic recursion depth and number of pair calculations (under the unit-cost arithmetic model).
+Thus `steps = floor(log2(n))+1` for n>0; n=0 gives steps=0. This is a proof of **O(log n) recursion steps**, not a machine-level bit-operation runtime bound. `FastFibWithSteps(n)` exposes both value and certified count.
 
-The original `FastFib(n)` API is unchanged. For the certified count, call:
+## Level 3: signed-64-bit representability
 
-```dafny
-method FastFibWithSteps(n: nat) returns (result: int, steps: nat)
+`Int64Fibonacci.dfy` defines the mathematical signed-64-bit range through a Dafny refinement type `I64`. All intermediate arithmetic results of the specialized algorithm are proven to fit in that range.
+
+| Interface | Valid natural-number inputs | Correct result |
+|---|---|---|
+| `FastPair64(n)` | 0–91 | `(F(n), F(n+1))` |
+| `FastFib64(n)` | 0–92 | `F(n)` |
+
+The result-only interface handles n=92 without constructing the unrepresentable F(93). Dafny proves the exact boundary:
+
+```text
+F(92) = 7,540,113,804,746,346,429  (fits)
+F(93) = 12,200,160,415,121,876,738 (does not fit)
+signed 64-bit maximum = 9,223,372,036,854,775,807
 ```
 
-## Project files
+A complete proof of representability is **not** the same as verifying a particular machine-code binary. The source uses mathematical integers with range-refinement proof obligations.
 
-- [`src/FastFibonacci.dfy`](src/FastFibonacci.dfy) — algorithm, two doubling identities, count model, inductive bound and contracts
-- [`docs/report.md`](docs/report.md) — course report, sections A-E
-- [`docs/complexity.md`](docs/complexity.md) — detailed logarithmic proof and examples
+## Repository layout
+
+- [`src/FastFibonacci.dfy`](src/FastFibonacci.dfy) — Levels 1 and 2
+- [`src/Int64Fibonacci.dfy`](src/Int64Fibonacci.dfy) — Level 3, including the original module
+- [`docs/complexity.md`](docs/complexity.md) — logarithmic bound and proof explanation
+- [`docs/safety.md`](docs/safety.md) — 64-bit model, exact boundaries, safe intermediate operations
+- [`docs/report.md`](docs/report.md) — FMSE homework report (sections A–E)
 - [`.github/workflows/verify.yml`](.github/workflows/verify.yml) — reproducible CI
 
-## Limits
-
-Arithmetic is on **unbounded mathematical integers**. The proof establishes functional correctness, termination, and the number of recursive steps, but **does not** establish O(log n) bit-operation runtime, bounded-integer overflow freedom, or a wall-time bound. These require additional models, and overflow safety is the proposed Level 3.
+**Scope:** nonnegative indices; mathematical integer semantics with range checks; no claims of fixed machine runtime or correctness of an unchecked overflowing executable.
